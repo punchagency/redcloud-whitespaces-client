@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import Map, { Marker } from 'react-map-gl';
-import { FaLocationDot } from "react-icons/fa6";
-
+import React, { useState, useEffect, useMemo } from 'react';
+import Map, { Marker, Popup } from 'react-map-gl';
+import { FaShop } from "react-icons/fa6";
+import { GiShoppingBag } from "react-icons/gi";
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -15,6 +15,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
     const [productLocations, setProductLocations] = useState([]);
     const [competitionLocations, setCompetitionLocations] = useState([]);
+    const [selectedLocation, setSelectedLocation] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -56,19 +57,6 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                 setProductLocations(productData.results);
                 setCompetitionLocations(competitionData.results);
 
-                // Calculate average latitude and longitude for centering the map
-                const allLocations = [...productData.results, ...competitionData.results];
-                let totalLat = 0;
-                let totalLng = 0;
-                allLocations.forEach(item => {
-                    totalLat += item.region[0];
-                    totalLng += item.region[1];
-                });
-                const avgLat = totalLat / allLocations.length;
-                const avgLng = totalLng / allLocations.length;
-
-                setViewState(prev => ({ ...prev, latitude: avgLat, longitude: avgLng }));
-
             } catch (err) {
                 setError(err);
                 console.error("Error fetching data:", err);
@@ -79,6 +67,30 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
         fetchData();
     }, [selectedProduct, radius]);
+
+    const averageCoordinates = useMemo(() => {
+        const allLocations = [...productLocations, ...competitionLocations];
+        // if (allLocations.length === 0) return { avgLat: 40, avgLng: -100 }; // Default values
+
+        let totalLat = 0;
+        let totalLng = 0;
+        allLocations.forEach(item => {
+            totalLat += item.region[0];
+            totalLng += item.region[1];
+        });
+        return {
+            avgLat: totalLat / allLocations.length,
+            avgLng: totalLng / allLocations.length
+        };
+    }, [productLocations, competitionLocations]);
+
+    useEffect(() => {
+        setViewState(prev => ({
+            ...prev,
+            latitude: averageCoordinates.avgLat,
+            longitude: averageCoordinates.avgLng
+        }));
+    }, [averageCoordinates]);
 
     if (loading) {
         return <div>Loading map data...</div>;
@@ -100,14 +112,13 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     key={`product-${index}`}
                     longitude={location.region[1]}
                     latitude={location.region[0]}
-                    onClick={() => onRegionSelect(location)}
+                    onClick={() => setSelectedLocation(location)}
                 >
-                    {/* <div style={{ border: '2px solid #3e068c', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}> */}
-                        <FaLocationDot
-                            size={20}
-                            color="#3e068c"
-                        />
-                    {/* </div> */}
+                    <FaShop
+                        size={20}
+                        color="#3e068c"
+                        style={{ cursor: 'pointer' }}
+                    />
                 </Marker>
             ))}
             {competitionLocations.map((location, index) => (
@@ -115,14 +126,29 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     key={`competition-${index}`}
                     longitude={location.region[1]}
                     latitude={location.region[0]}
-                    onClick={() => onRegionSelect(location)}
+                    onClick={() => setSelectedLocation(location)}
                 >
-                    <FaLocationDot
+                    <GiShoppingBag
                         size={20}
                         color="#fc5805"
                     />
                 </Marker>
             ))}
+            {selectedLocation && (
+                <Popup
+                    longitude={selectedLocation.region[1]}
+                    latitude={selectedLocation.region[0]}
+                    onClose={() => setSelectedLocation(null)}
+                    closeOnClick={false}
+                >
+                    <div>
+                        <h3>Region Insights</h3>
+                        <p>Total Order Count: {selectedLocation.total_order_count}</p>
+                        <p>Total Quantity: {selectedLocation.total_quantity}</p>
+                        <p>Total Sales (USD): {selectedLocation.total_sales_usd}</p>
+                    </div>
+                </Popup>
+            )}
         </Map>
     );
 };
