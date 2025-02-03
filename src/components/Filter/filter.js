@@ -53,6 +53,13 @@ const Filter = ({ onProductSelect, onRadiusChange }) => {
                 placeholder="Search and select a product"
                 isLoading={loading}
                 className="mb-4"
+                styles={{
+                    control: (base) => ({
+                        ...base,
+                        cursor: 'pointer',
+                        color: 'black'
+                    })
+                }}
             />
             {error && <div className="text-red-500">Error: {error.message}</div>}
             <div className="mt-4">
@@ -64,6 +71,7 @@ const Filter = ({ onProductSelect, onRadiusChange }) => {
                     value={radius}
                     onChange={handleRadiusChange}
                     className="w-full"
+                    style={{ cursor: 'pointer' }}
                 />
             </div>
         </div>
