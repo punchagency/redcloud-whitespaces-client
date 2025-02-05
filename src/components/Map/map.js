@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import { FaShop } from "react-icons/fa6";
 import { GiShoppingBag } from "react-icons/gi";
+import { CiShop } from "react-icons/ci";
+
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -10,7 +12,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
     const [viewState, setViewState] = useState({
         longitude: 5.932599209790851,  // Center longitude for Nigeria
         latitude: 9.340632608330793,   // Center latitude for Nigeria
-        zoom: 4        // Adjust zoom level as needed
+        zoom: 5        // Adjust zoom level as needed
     });
 
     const [productLocations, setProductLocations] = useState([]);
@@ -71,7 +73,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
     const averageCoordinates = useMemo(() => {
         const allLocations = [...productLocations, ...competitionLocations];
-        // if (allLocations.length === 0) return { avgLat: 40, avgLng: -100 }; // Default values
+        if (allLocations.length === 0) return { avgLng: 5.932599209790851, avgLat: 9.340632608330793 }; // Default values
 
         let totalLat = 0;
         let totalLng = 0;
@@ -97,16 +99,16 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         const createFeature = (location, isProduct) => {
             const { min_x, min_y, max_x, max_y, region, seller_name, total_order_count, total_quantity, total_sales_usd } = location;
 
-            if (min_x === null && min_y === null && max_x === null && max_y === null) {
+            if (min_x === null || min_y === null || max_x === null || max_y === null) {
                 return null;
             }
 
             const coordinates = [
-                [min_x ?? region[1], min_y ?? region[0]], // Bottom-left
-                [max_x ?? region[1], min_y ?? region[0]], // Bottom-right
-                [max_x ?? region[1], max_y ?? region[0]], // Top-right
-                [min_x ?? region[1], max_y ?? region[0]], // Top-left
-                [min_x ?? region[1], min_y ?? region[0]]  // Closing the polygon
+                [min_x, min_y], // Bottom-left
+                [max_x, min_y], // Bottom-right
+                [max_x, max_y], // Top-right
+                [min_x, max_y], // Top-left
+                [min_x, min_y]  // Closing the polygon
             ];
 
             return {
@@ -141,8 +143,6 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                 region: [event.lngLat.lat, event.lngLat.lng]
             });
         }
-        console.log(selectedLocation);
-        console.log(event);
     };
 
     if (loading) {
@@ -179,7 +179,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     id="competition-coverage-layer"
                     type="fill"
                     paint={{
-                        'fill-color': '#fc5805',
+                        'fill-color': '#0c7817',
                         'fill-opacity': 0.2
                     }}
                     filter={['==', 'isProduct', false]}
@@ -206,7 +206,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     latitude={location.region[0]}
                     onClick={() => setSelectedLocation(location)}
                 >
-                    <GiShoppingBag
+                    <CiShop
                         size={20}
                         color="#fc5805"
                     />
@@ -224,7 +224,6 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                         <p>Total Order Count: {selectedLocation.total_order_count}</p>
                         <p>Total Quantity: {selectedLocation.total_quantity}</p>
                         <p>Total Sales (USD): {selectedLocation.total_sales_usd}</p>
-                        <p>Coverage Area: {selectedLocation.max_x && selectedLocation.max_y ? 'Defined' : 'Not Defined'}</p>
                     </div>
                 </Popup>
             )}
