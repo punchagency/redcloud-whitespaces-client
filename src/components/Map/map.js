@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
-import { FaLocationDot, FaShop } from "react-icons/fa6";
-import { GiShoppingBag } from "react-icons/gi";
-import { CiShop } from "react-icons/ci";
+import { FaLocationDot } from "react-icons/fa6";
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
-    const mapRef = useRef(null);
     const [viewState, setViewState] = useState({
         longitude: 5.932599209790851,  // Center longitude for Nigeria
         latitude: 9.340632608330793,   // Center latitude for Nigeria
@@ -248,25 +245,14 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         if (event.features && event.features.length > 0) {
             const feature = event.features[0];
             if (feature.layer.id === 'clusters') {
-                const clusterId = feature.properties.cluster_id;
-                const map = mapRef.current.getMap();
                 const { lng, lat } = event.lngLat;
 
-                if (map && typeof map.getSource === 'function') {
-                    const mapSource = map.getSource('location-clusters');
-                    if (mapSource && typeof mapSource.getClusterExpansionZoom === 'function') {
-                        mapSource.getClusterExpansionZoom(clusterId, (err, expansionZoom) => {
-                            if (!err) {
-                                setViewState({
-                                    ...viewState,
-                                    longitude: lng,
-                                    latitude: lat,
-                                    zoom: expansionZoom
-                                });
-                            }
-                        });
-                    }
-                }
+                setViewState({
+                    ...viewState,
+                    longitude: lng,
+                    latitude: lat,
+                    zoom: 14
+                });
             } else if (feature.layer.id === 'product-coverage-layer' || feature.layer.id === 'similar-product-coverage-layer') {
                 const { lng, lat } = event.lngLat;
                 setViewState({
@@ -289,7 +275,6 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
     return (
         <Map
-            ref={mapRef}
             mapboxAccessToken={MAPBOX_TOKEN}
             initialViewState={viewState}
             style={{ width: '100%', height: '500px' }}
