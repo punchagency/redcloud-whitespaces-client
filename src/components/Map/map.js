@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
-import { FaShop } from "react-icons/fa6";
+import { FaLocationDot, FaShop } from "react-icons/fa6";
 import { GiShoppingBag } from "react-icons/gi";
 import { CiShop } from "react-icons/ci";
 
@@ -9,6 +9,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
+    const mapRef = useRef(null);
     const [viewState, setViewState] = useState({
         longitude: 5.932599209790851,  // Center longitude for Nigeria
         latitude: 9.340632608330793,   // Center latitude for Nigeria
@@ -17,6 +18,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
     const [productLocations, setProductLocations] = useState([]);
     const [competitionLocations, setCompetitionLocations] = useState([]);
+    const [productBuyers, setProductBuyers] = useState([]);
+    const [similarProductBuyers, setSimilarProductBuyers] = useState([]);
     const [selectedLocation, setSelectedLocation] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -27,7 +30,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [productRes, competitionRes] = await Promise.all([
+                const [productRes, competitionRes, productBuyersRes, similarProductBuyersRes] = await Promise.all([
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/regional-performance`, {
                         method: 'POST',
                         headers: {
@@ -47,18 +50,42 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                             brand: selectedProduct,
                             radius_km: radius
                         })
+                    }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/product-buyers-locations`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            brand: selectedProduct,
+                            radius_km: radius
+                        })
+                    }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/similar-product-buyers-locations`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            brand: selectedProduct,
+                            radius_km: radius
+                        })
                     })
                 ]);
 
-                if (!productRes.ok || !competitionRes.ok) {
-                    throw new Error(`HTTP error! status: ${productRes.status} or ${competitionRes.status}`);
+                if (!productRes.ok || !competitionRes.ok || !productBuyersRes.ok || !similarProductBuyersRes.ok) {
+                    throw new Error(`HTTP error! status: ${productRes.status}, ${competitionRes.status}, ${productBuyersRes.status}, or ${similarProductBuyersRes.status}`);
                 }
 
                 const productData = await productRes.json();
                 const competitionData = await competitionRes.json();
+                const productBuyersData = await productBuyersRes.json();
+                const similarProductBuyersData = await similarProductBuyersRes.json();
 
-                setProductLocations(productData.results);
-                setCompetitionLocations(competitionData.results);
+                setProductLocations(productData.results || []);
+                setCompetitionLocations(competitionData.results || []);
+                setProductBuyers(productBuyersData.results || []);
+                setSimilarProductBuyers(similarProductBuyersData.results || []);
 
             } catch (err) {
                 setError(err);
@@ -71,46 +98,75 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         fetchData();
     }, [selectedProduct, radius]);
 
-    const averageCoordinates = useMemo(() => {
-        const allLocations = [...productLocations, ...competitionLocations];
-        if (allLocations.length === 0) return { avgLng: 5.932599209790851, avgLat: 9.340632608330793 }; // Default values
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371; // Radius of the Earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distance in km
+    };
 
-        let totalLat = 0;
-        let totalLng = 0;
-        allLocations.forEach(item => {
-            totalLat += item.region[0];
-            totalLng += item.region[1];
-        });
-        return {
-            avgLat: totalLat / allLocations.length,
-            avgLng: totalLng / allLocations.length
-        };
-    }, [productLocations, competitionLocations]);
-
-    useEffect(() => {
-        setViewState(prev => ({
-            ...prev,
-            latitude: averageCoordinates.avgLat,
-            longitude: averageCoordinates.avgLng
-        }));
-    }, [averageCoordinates]);
-
-    const coverageFeatures = useMemo(() => {
-        const createFeature = (location, isProduct) => {
-            const { min_x, min_y, max_x, max_y, region, seller_name, total_order_count, total_quantity, total_sales_usd } = location;
-
-            if (min_x === null || min_y === null || max_x === null || max_y === null) {
-                return null;
+    const clusterPoints = (points) => {
+        const clusters = [];
+        points.forEach(point => {
+            let added = false;
+            for (let cluster of clusters) {
+                if (calculateDistance(cluster[0].lat, cluster[0].lng, point.lat, point.lng) <= 25) {
+                    cluster.push(point);
+                    added = true;
+                    break;
+                }
             }
+            if (!added) {
+                clusters.push([point]);
+            }
+        });
+        return clusters;
+    };
 
-            const coordinates = [
-                [min_x, min_y], // Bottom-left
-                [max_x, min_y], // Bottom-right
-                [max_x, max_y], // Top-right
-                [min_x, max_y], // Top-left
-                [min_x, min_y]  // Closing the polygon
-            ];
+    const calculateConvexHull = (points) => {
+        if (points.length < 3) return []; // Convex hull is not possible with less than 3 points
 
+        points.sort((a, b) => a.lng === b.lng ? a.lat - b.lat : a.lng - b.lng);
+
+        const lower = [];
+        for (const point of points) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) {
+                lower.pop();
+            }
+            lower.push(point);
+        }
+
+        const upper = [];
+        for (let i = points.length - 1; i >= 0; i--) {
+            const point = points[i];
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) {
+                upper.pop();
+            }
+            upper.push(point);
+        }
+
+        upper.pop();
+        lower.pop();
+
+        return lower.concat(upper);
+    };
+
+    const cross = (o, a, b) => {
+        return (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng);
+    };
+
+    const createPolygonFeatures = (clusters, isProduct) => {
+        return clusters.map((cluster, index) => {
+            if (cluster.length < 3) return null; // Skip clusters with less than 3 points
+
+            const hull = calculateConvexHull(cluster);
+            const coordinates = hull.map(point => [parseFloat(point.lng), parseFloat(point.lat)]);
+            coordinates.push(coordinates[0]); // Close the polygon
             return {
                 type: "Feature",
                 geometry: {
@@ -118,30 +174,108 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     coordinates: [coordinates]
                 },
                 properties: {
-                    id: seller_name,
-                    isProduct,
-                    region,
-                    seller_name,
-                    total_order_count,
-                    total_quantity,
-                    total_sales_usd
+                    id: `cluster-${index}`,
+                    isProduct
                 }
             };
-        };
+        }).filter(feature => feature !== null);
+    };
 
-        const productFeatures = productLocations.map(location => createFeature(location, true)).filter(feature => feature !== null);
-        const competitionFeatures = competitionLocations.map(location => createFeature(location, false)).filter(feature => feature !== null);
+    const coverageFeatures = useMemo(() => {
+        const productClusters = clusterPoints(productBuyers);
+        const similarProductClusters = clusterPoints(similarProductBuyers);
 
-        return [...productFeatures, ...competitionFeatures];
-    }, [productLocations, competitionLocations]);
+        const productFeatures = createPolygonFeatures(productClusters, true);
+        const similarProductFeatures = createPolygonFeatures(similarProductClusters, false);
+
+        return [...productFeatures, ...similarProductFeatures];
+    }, [productBuyers, similarProductBuyers]);
+
+    const clusterLayer = {
+        id: 'clusters',
+        type: 'circle',
+        source: 'locations',
+        filter: ['has', 'point_count'],
+        paint: {
+            'circle-color': [
+                'step',
+                ['get', 'point_count'],
+                '#57daf7',
+                100,
+                '#f1f075',
+                750,
+                '#f28cb1'
+            ],
+            'circle-radius': [
+                'step',
+                ['get', 'point_count'],
+                20,
+                100,
+                30,
+                750,
+                40
+            ],
+            'circle-opacity': 0.6
+        }
+    };
+
+    const clusterCountLayer = {
+        id: 'cluster-count',
+        type: 'symbol',
+        source: 'locations',
+        filter: ['has', 'point_count'],
+        layout: {
+            'text-field': '{point_count_abbreviated}',
+            'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+            'text-size': 12
+        }
+    };
+
+    const unclusteredPointLayer = {
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'locations',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+            'circle-color': '#11b4da',
+            'circle-radius': 4,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#fff'
+        }
+    };
 
     const handleLayerClick = (event) => {
-        const feature = event.features[0];
-        if (feature) {
-            setSelectedLocation({
-                ...feature.properties,
-                region: [event.lngLat.lat, event.lngLat.lng]
-            });
+        if (event.features && event.features.length > 0) {
+            const feature = event.features[0];
+            if (feature.layer.id === 'clusters') {
+                const clusterId = feature.properties.cluster_id;
+                const map = mapRef.current.getMap();
+                const { lng, lat } = event.lngLat;
+
+                if (map && typeof map.getSource === 'function') {
+                    const mapSource = map.getSource('location-clusters');
+                    if (mapSource && typeof mapSource.getClusterExpansionZoom === 'function') {
+                        mapSource.getClusterExpansionZoom(clusterId, (err, expansionZoom) => {
+                            if (!err) {
+                                setViewState({
+                                    ...viewState,
+                                    longitude: lng,
+                                    latitude: lat,
+                                    zoom: expansionZoom
+                                });
+                            }
+                        });
+                    }
+                }
+            } else if (feature.layer.id === 'product-coverage-layer' || feature.layer.id === 'similar-product-coverage-layer') {
+                const { lng, lat } = event.lngLat;
+                setViewState({
+                    ...viewState,
+                    longitude: lng,
+                    latitude: lat,
+                    zoom: 14 // Zoom in close to the polygon
+                });
+            }
         }
     };
 
@@ -155,12 +289,14 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
 
     return (
         <Map
+            ref={mapRef}
             mapboxAccessToken={MAPBOX_TOKEN}
             initialViewState={viewState}
             style={{ width: '100%', height: '500px' }}
             mapStyle="mapbox://styles/mapbox/streets-v9"
-            interactiveLayerIds={['product-coverage-layer', 'competition-coverage-layer']}
+            interactiveLayerIds={['clusters', 'product-coverage-layer', 'similar-product-coverage-layer']}
             onClick={handleLayerClick}
+            onMove={evt => setViewState(evt.viewState)}
         >
             <Source id="coverage-areas" type="geojson" data={{
                 type: "FeatureCollection",
@@ -176,42 +312,97 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     filter={['==', 'isProduct', true]}
                 />
                 <Layer
-                    id="competition-coverage-layer"
+                    id="similar-product-coverage-layer"
                     type="fill"
                     paint={{
                         'fill-color': '#0c7817',
-                        'fill-opacity': 0.2
+                        'fill-opacity': 0.1
+                    }}
+                    filter={['==', 'isProduct', false]}
+                />
+                <Layer
+                    id="product-outline-layer"
+                    type="line"
+                    paint={{
+                        'line-color': '#3e068c',
+                        'line-width': 2
+                    }}
+                    filter={['==', 'isProduct', true]}
+                />
+                <Layer
+                    id="similar-product-outline-layer"
+                    type="line"
+                    paint={{
+                        'line-color': '#0c7817',
+                        'line-width': 2
                     }}
                     filter={['==', 'isProduct', false]}
                 />
             </Source>
-            {productLocations.map((location, index) => (
+            <Source
+                id="location-clusters"
+                type="geojson"
+                data={{
+                    type: "FeatureCollection",
+                    features: [
+                        ...productLocations.map(location => ({
+                            type: "Feature",
+                            geometry: {
+                                type: "Point",
+                                coordinates: [location.region[1], location.region[0]]
+                            },
+                            properties: {
+                                category: 'product'
+                            }
+                        })),
+                        // ...competitionLocations.map(location => ({
+                        //     type: "Feature",
+                        //     geometry: {
+                        //         type: "Point",
+                        //         coordinates: [location.region[1], location.region[0]]
+                        //     },
+                        //     properties: {
+                        //         category: 'competition'
+                        //     }
+                        // }))
+                    ]
+                }}
+                cluster={true}
+                clusterMaxZoom={14}
+                clusterRadius={50}
+            >
+                <Layer {...clusterLayer} />
+                <Layer {...clusterCountLayer} />
+                <Layer {...unclusteredPointLayer} />
+            </Source>
+            {viewState.zoom > 10 && productLocations.map((location, index) => (
                 <Marker
                     key={`product-${index}`}
                     longitude={location.region[1]}
                     latitude={location.region[0]}
                     onClick={() => setSelectedLocation(location)}
                 >
-                    <FaShop
+                    <FaLocationDot
                         size={20}
                         color="#3e068c"
                         style={{ cursor: 'pointer' }}
                     />
                 </Marker>
             ))}
-            {competitionLocations.map((location, index) => (
+            {/* {viewState.zoom > 10 && competitionLocations.map((location, index) => (
                 <Marker
                     key={`competition-${index}`}
                     longitude={location.region[1]}
                     latitude={location.region[0]}
                     onClick={() => setSelectedLocation(location)}
                 >
-                    <CiShop
+                    <FaLocationDot
                         size={20}
                         color="#fc5805"
+                        style={{ cursor: 'pointer' }}
                     />
                 </Marker>
-            ))}
+            ))} */}
             {selectedLocation && (
                 <Popup
                     longitude={selectedLocation.region[1]}
