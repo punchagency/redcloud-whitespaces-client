@@ -161,6 +161,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
             mapStyle="mapbox://styles/mapbox/streets-v9"
             interactiveLayerIds={['product-coverage-layer', 'competition-coverage-layer']}
             onClick={handleLayerClick}
+
         >
             <Source id="coverage-areas" type="geojson" data={{
                 type: "FeatureCollection",
