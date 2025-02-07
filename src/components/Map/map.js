@@ -197,9 +197,9 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
             'circle-color': [
                 'step',
                 ['get', 'point_count'],
-                '#f28cb1',
+                '#E07A5F',
                 2,
-                '#81e0eb',
+                '#E07A5F',
                 100,
                 '#f1f075',
                 // 750,
@@ -238,7 +238,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         source: 'locations',
         filter: ['!', ['has', 'point_count']],
         paint: {
-            'circle-color': '#11b4da',
+            'circle-color': '#E07A5F',
             'circle-radius': 6,
             'circle-stroke-width': 1,
             'circle-opacity': 0.8,
@@ -297,8 +297,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     id="product-coverage-layer"
                     type="fill"
                     paint={{
-                        'fill-color': '#3e068c',
-                        'fill-opacity': 0.2
+                        'fill-color': '#203A58',
+                        'fill-opacity': 0.4
                     }}
                     filter={['==', 'isProduct', true]}
                 />
@@ -306,8 +306,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     id="similar-product-coverage-layer"
                     type="fill"
                     paint={{
-                        'fill-color': '#0c7817',
-                        'fill-opacity': 0.1
+                        'fill-color': '#81B29A',
+                        'fill-opacity': 0.4
                     }}
                     filter={['==', 'isProduct', false]}
                 />
@@ -315,7 +315,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     id="product-outline-layer"
                     type="line"
                     paint={{
-                        'line-color': '#3e068c',
+                        'line-color': '#203A58',
                         'line-width': 2
                     }}
                     filter={['==', 'isProduct', true]}
@@ -324,7 +324,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     id="similar-product-outline-layer"
                     type="line"
                     paint={{
-                        'line-color': '#0c7817',
+                        'line-color': '#81B29A',
                         'line-width': 2
                     }}
                     filter={['==', 'isProduct', false]}
@@ -374,8 +374,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                     onClick={() => setSelectedLocation(location)}
                 >
                     <FaLocationDot
-                        size={20}
-                        color="#3e068c"
+                        size={6}
+                        color="#78574B"
                         style={{ cursor: 'pointer' }}
                     />
                 </Marker>
