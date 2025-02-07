@@ -6,7 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
+const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
     const [viewState, setViewState] = useState({
         longitude: 5.932599209790851,  // Center longitude for Nigeria
         latitude: 9.340632608330793,   // Center latitude for Nigeria
@@ -22,7 +22,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!selectedProduct) return;
+        if (!selectedProduct && !selectedBrand) return;
 
         const fetchData = async () => {
             try {
@@ -34,7 +34,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            brand: selectedProduct,
+                            product_name: selectedProduct || '',
+                            brand: selectedBrand || '',
                             radius_km: radius
                         })
                     }),
@@ -44,7 +45,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            brand: selectedProduct,
+                            product_name: selectedProduct || '',
+                            brand: selectedBrand || '',
                             radius_km: radius
                         })
                     }),
@@ -54,7 +56,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            brand: selectedProduct,
+                            product_name: selectedProduct || '',
+                            brand: selectedBrand || '',
                             radius_km: radius
                         })
                     }),
@@ -64,7 +67,8 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            brand: selectedProduct,
+                            product_name: selectedProduct || '',
+                            brand: selectedBrand || '',
                             radius_km: radius
                         })
                     })
@@ -93,7 +97,7 @@ const MapComponent = ({ onRegionSelect, selectedProduct, radius }) => {
         };
 
         fetchData();
-    }, [selectedProduct, radius]);
+    }, [selectedProduct, selectedBrand, radius]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Radius of the Earth in km
