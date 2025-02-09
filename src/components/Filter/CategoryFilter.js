@@ -1,81 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react'
 import * as Popover from '@radix-ui/react-popover';
-import { ChevronDown, Search, Loader2 } from 'lucide-react'
+import { ChevronDown, Search, Loader2 } from 'lucide-react';
+import useCategories from './hooks/useCategories';
 
+const CategoryFilter = ({ selectedCategory: initialSelectedCategory, onCategorySelect }) => {
 
-const ITEMS_PER_PAGE = 10;
-
-
-const CategoryFilter = ({ selectedBrand }) => {
-
+    // Local state for controlling the popover, search input, and selected category.
     const [open, setOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
-    const [selectedBrand, setSelectedBrand] = useState(selectedBrand || null);
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
+    // Now selectedCategory will store the unique category name.
+    const [selectedCategory, setSelectedCategory] = useState(initialSelectedCategory || null);
     const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [initialLoad, setInitialLoad] = useState(true);
-    const [error, setError] = useState(null);
 
-    // fetch categories when dropdown is opened
-    const fetchCategories = async () => {
-        setLoading(true);
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories?page=${page}&limit=${ITEMS_PER_PAGE}`);
-            const data = await response.json();
-            if (pageNum === 1) {
-                setCategories(data.categories);
-            } else {
-                setCategories(prev => [...prev, ...data.categories]);
-            }
-            setHasMore(data.categories.length === ITEMS_PER_PAGE);  // i dont think this is right
-            setInitialLoad(false);
-        } catch (error) {
-            setError(error.message);
+    // use the custom hook to fetch categories
+    const { categories, loading, hasMore, error } = useCategories(searchValue, page)
 
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    // Handle dropdown open
+    // When the search input changes, reset to page 1.
     useEffect(() => {
-        if (open && initialLoad) {
-            fetchCategories(1);
-        }
-    }, [open]);
+        setPage(1);
+    }, [searchValue]);
+
+    // Intersection Observer ref for infinite scrolling.
+    const observerTarget = useRef(null);
 
     useEffect(() => {
         if (!open) return;
-
-        const timer = setTimeout(() => {
-            setPage(1);
-            fetchCategories(1, searchValue);
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [searchValue])
-
-    // Intersection observer to load more categories
-    const observerTarget = React.useRef(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasMore && !loading && open) {
-                setPage(prev => {
-                    const nextPage = prev + 1;
-                    fetchCategories(nextPage, searchValue);
-                    return nextPage;
-                });
-            }
-        }, { threshold: 1.0 });
-
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loading) {
+                    setPage((prev) => prev + 1);
+                }
+            },
+            { threshold: 1.0 }
+        );
         if (observerTarget.current) {
             observer.observe(observerTarget.current);
         }
-    },
-        [hasMore, loading, open])
+        return () => {
+            if (observerTarget.current) {
+                observer.unobserve(observerTarget.current);
+            }
+        };
+    }, [hasMore, loading, open]);
+
+    // Handle category selection using the unique category name.
+    const handleSelect = (category) => {
+        setSelectedCategory(category.name);
+        if (onCategorySelect) {
+            onCategorySelect(category);
+        }
+        setOpen(false);
+    };
+
 
     return (
         <div className="w-full max-w-md mx-auto">
@@ -86,7 +62,9 @@ const CategoryFilter = ({ selectedBrand }) => {
                         aria-label="Select category"
                     >
                         <span className="text-sm">
-                            {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : 'Select category...'}
+                            {selectedCategory
+                                ? selectedCategory
+                                : 'Select category...'}
                         </span>
                         <ChevronDown className="h-4 w-4 opacity-50" />
                     </button>
@@ -110,24 +88,20 @@ const CategoryFilter = ({ selectedBrand }) => {
                         </div>
 
                         <div className="max-h-[300px] overflow-y-auto">
-                            {initialLoad ? (
+                            {loading && page === 1 ? (
                                 <div className="p-4 flex justify-center">
                                     <Loader2 className="h-6 w-6 animate-spin" />
                                 </div>
                             ) : categories.length === 0 ? (
-                                <div className="p-4 text-center text-sm text-gray-500">
-                                    No categories found
-                                </div>
+                                <div className="p-4 text-center text-sm text-gray-500">No categories found</div>
                             ) : (
                                 <>
-                                    {categories.map(category => (
+                                    {categories.map((category) => (
                                         <button
-                                            key={category.id}
-                                            className={`w-full p-2 text-left text-sm hover:bg-gray-100 flex items-center ${selectedCategory === category.id ? 'bg-gray-50' : ''}`}
-                                            onClick={() => {
-                                                setSelectedCategory(category.id);
-                                                setOpen(false);
-                                            }}
+                                            key={category.name}
+                                            className={`w-full p-2 text-left text-sm hover:bg-gray-100 flex items-center ${selectedCategory === category.name ? 'bg-gray-50' : ''
+                                                }`}
+                                            onClick={() => handleSelect(category)}
                                         >
                                             {category.name}
                                         </button>
@@ -140,15 +114,17 @@ const CategoryFilter = ({ selectedBrand }) => {
                                 </>
                             )}
                         </div>
+                        {error && (
+                            <div className="p-2 text-center text-sm text-red-500">
+                                {error.message || 'Error loading categories'}
+                            </div>
+                        )}
                     </Popover.Content>
                 </Popover.Portal>
             </Popover.Root>
         </div>
     );
-};
 
-export default CategoryFilter;
+}
 
-
-// Categories endpoint
-// whitespace for category endpoint 
+export default CategoryFilter
