@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import Select from 'react-select';
 import debounce from 'lodash.debounce';
+import CategoryFilter from './CategoryFilter';
 
-const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
+const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange, onCategorySelect }) => {
     const [brands, setBrands] = useState([]);
     const [products, setProducts] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+
     const [radius, setRadius] = useState(10); // Default radius value
 
     const fetchBrands = async (inputValue) => {
@@ -66,10 +69,31 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
         debouncedFetchProducts(inputValue, selectedBrand);
     };
 
+
+
     const handleBrandSelect = (brand) => {
         setSelectedBrand(brand.value);
         onBrandSelect(brand);
     };
+
+
+    const handleCategorySelect = (category) => {
+        if (category === null) {
+            // Clear selection: revert to initial state.
+            setSelectedCategory(null);
+            if (onCategorySelect) {
+                onCategorySelect(null);
+            }
+        } else {
+            setSelectedCategory(category.name);
+            if (onCategorySelect) {
+                onCategorySelect(category);
+            }
+        }
+    };
+
+
+
 
     const handleRadiusChange = (event) => {
         const newRadius = parseInt(event.target.value, 10);
@@ -113,6 +137,13 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
                         color: 'black'
                     })
                 }}
+            />
+
+            {/* Category filter integrated here */}
+            <h3 className="text-md font-semibold mb-2">Category</h3>
+            <CategoryFilter
+                selectedCategory={selectedCategory}
+                onCategorySelect={handleCategorySelect}
             />
 
             {error && <div className="text-red-500">Error: {error.message}</div>}

@@ -28,7 +28,7 @@ function useCategories(search, page, limit = ITEMS_PER_PAGE) {
         setError(null);
 
         // Build the URL including page, limit, and search term parameters.
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/categories?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?page=${page}&per_page=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''
             }`;
 
         fetch(url)
@@ -37,14 +37,16 @@ function useCategories(search, page, limit = ITEMS_PER_PAGE) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return response.json();
+
             })
             .then((data) => {
+
                 // If on the first page, replace the list; otherwise append.
                 setCategories((prev) =>
-                    page === 1 ? data.categories : [...prev, ...data.categories]
+                    page === 1 ? data.results : [...prev, ...data.results]
                 );
                 // If we received less than the limit, there is no more data.
-                setHasMore(data.categories.length === limit);
+                setHasMore(data.results.length === limit);
             })
             .catch((err) => setError(err))
             .finally(() => setLoading(false));

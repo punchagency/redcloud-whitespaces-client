@@ -21,73 +21,238 @@ const MapComponent = ({ selectedBrand, selectedProduct, selectedCategory, radius
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // useEffect(() => {
+    //     // if (!selectedProduct && !selectedBrand)  return;
+    //     // If neither product/brand nor category is selected, then do nothing.
+    //     if (!(selectedProduct || selectedBrand || selectedCategory)) {
+    //         // No selection—clear map data.
+    //         setProductLocations([]);
+    //         setCompetitionLocations([]);
+    //         setProductBuyers([]);
+    //         setSimilarProductBuyers([]);
+    //         return;
+    //     };
+
+    //     const fetchData = async () => {
+    //         try {
+    //             setLoading(true);
+
+    //             // If a product (or brand) is selected, call the product endpoints.
+    //             if (selectedProduct || selectedBrand) {
+    //                 const [
+    //                     productRes,
+    //                     competitionRes,
+    //                     productBuyersRes,
+    //                     similarProductBuyersRes,
+    //                 ] = await Promise.all([
+    //                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/regional-performance`, {
+    //                         method: 'POST',
+    //                         headers: { 'Content-Type': 'application/json' },
+    //                         body: JSON.stringify({
+    //                             product_name: selectedProduct || '',
+    //                             brand: selectedBrand || '',
+    //                             radius_km: radius,
+    //                         }),
+    //                     }),
+    //                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/comparable-product-performance`, {
+    //                         method: 'POST',
+    //                         headers: { 'Content-Type': 'application/json' },
+    //                         body: JSON.stringify({
+    //                             product_name: selectedProduct || '',
+    //                             brand: selectedBrand || '',
+    //                             radius_km: radius,
+    //                         }),
+    //                     }),
+    //                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/product-buyers-locations`, {
+    //                         method: 'POST',
+    //                         headers: { 'Content-Type': 'application/json' },
+    //                         body: JSON.stringify({
+    //                             product_name: selectedProduct || '',
+    //                             brand: selectedBrand || '',
+    //                             radius_km: radius,
+    //                         }),
+    //                     }),
+    //                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/similar-product-buyers-locations`, {
+    //                         method: 'POST',
+    //                         headers: { 'Content-Type': 'application/json' },
+    //                         body: JSON.stringify({
+    //                             product_name: selectedProduct || '',
+    //                             brand: selectedBrand || '',
+    //                             radius_km: radius,
+    //                         }),
+    //                     }),
+    //                 ]);
+
+    //                 // Check response statuses.
+    //                 if (
+    //                     !productRes.ok ||
+    //                     !competitionRes.ok ||
+    //                     !productBuyersRes.ok ||
+    //                     !similarProductBuyersRes.ok
+    //                 ) {
+    //                     throw new Error(
+    //                         `HTTP error! status: ${productRes.status}, ${competitionRes.status}, ${productBuyersRes.status}, or ${similarProductBuyersRes.status}`
+    //                     );
+    //                 }
+
+    //                 const productData = await productRes.json();
+    //                 const competitionData = await competitionRes.json();
+    //                 const productBuyersData = await productBuyersRes.json();
+    //                 const similarProductBuyersData = await similarProductBuyersRes.json();
+
+    //                 setProductLocations(productData.results || []);
+    //                 setCompetitionLocations(competitionData.results || []);
+    //                 setProductBuyers(productBuyersData.results || []);
+    //                 setSimilarProductBuyers(similarProductBuyersData.results || []);
+    //             }
+    //             // Else, if a category is selected (and no product/brand), use the category endpoint.
+    //             else if (selectedCategory) {
+    //                 // The category endpoint is assumed to return data in the following shape:
+    //                 // { regional_performance: [...], buyers_locations: [...] }
+    //                 const catRes = await fetch(
+    //                     `${process.env.NEXT_PUBLIC_API_URL}/white-space/categories?category=${encodeURIComponent(
+    //                         selectedCategory
+    //                     )}&radius_km=${radius}`
+    //                 );
+    //                 if (!catRes.ok) {
+    //                     throw new Error(`HTTP error! status: ${catRes.status}`);
+    //                 }
+    //                 const catData = await catRes.json();
+
+    //                 // Map the category-level data to the expected shape:
+    //                 // We assign regional_performance to productLocations,
+    //                 // and buyers_locations to productBuyers.
+    //                 setProductLocations(catData.regional_performance || []);
+    //                 setProductBuyers(catData.buyers_locations || []);
+    //                 // Clear any product-specific data.
+    //                 setCompetitionLocations([]);
+    //                 setSimilarProductBuyers([]);
+    //             }
+    //         } catch (err) {
+    //             setError(err);
+    //             console.error("Error fetching data:", err);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchData();
+    // }, [selectedProduct, selectedBrand, selectedCategory, radius]);
+
     useEffect(() => {
-        if (!selectedProduct && !selectedBrand) return;
+        // If no filters are selected at all, clear all map data.
+        if (!(selectedCategory || selectedProduct || selectedBrand)) {
+            setProductLocations([]);
+            setCompetitionLocations([]);
+            setProductBuyers([]);
+            setSimilarProductBuyers([]);
+            return;
+        }
 
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [productRes, competitionRes, productBuyersRes, similarProductBuyersRes] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/regional-performance`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_name: selectedProduct || '',
-                            brand: selectedBrand || '',
-                            radius_km: radius
-                        })
-                    }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/comparable-product-performance`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_name: selectedProduct || '',
-                            brand: selectedBrand || '',
-                            radius_km: radius
-                        })
-                    }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/product-buyers-locations`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_name: selectedProduct || '',
-                            brand: selectedBrand || '',
-                            radius_km: radius
-                        })
-                    }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/similar-product-buyers-locations`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_name: selectedProduct || '',
-                            brand: selectedBrand || '',
-                            radius_km: radius
-                        })
-                    })
-                ]);
 
-                if (!productRes.ok || !competitionRes.ok || !productBuyersRes.ok || !similarProductBuyersRes.ok) {
-                    throw new Error(`HTTP error! status: ${productRes.status}, ${competitionRes.status}, ${productBuyersRes.status}, or ${similarProductBuyersRes.status}`);
+                // First: check if a category is selected.
+                if (selectedCategory) {
+                    // Within a category, check if a product is also selected.
+                    if (selectedProduct) {
+                        // CASE: Both a category and a product are selected.
+                        // Call the new endpoint (GET) that requires both product and category.
+                        const prodRes = await fetch(
+                            `${process.env.NEXT_PUBLIC_API_URL}/white-space/product-whitespace?product=${encodeURIComponent(selectedProduct)}&category=${encodeURIComponent(selectedCategory)}`
+                        );
+                        if (!prodRes.ok) {
+                            throw new Error(`HTTP error! status: ${prodRes.status}`);
+                        }
+                        const prodData = await prodRes.json();
+                        setProductLocations(prodData.regional_performance || []);
+                        setProductBuyers(prodData.buyers_locations || []);
+                        setCompetitionLocations([]);
+                        setSimilarProductBuyers([]);
+                    } else {
+                        // CASE: Only a category is selected.
+                        // Call the old category-whitespace endpoint.
+                        const catRes = await fetch(
+                            `${process.env.NEXT_PUBLIC_API_URL}/white-space/categories?category=${encodeURIComponent(selectedCategory)}&radius_km=${radius}`
+                        );
+                        if (!catRes.ok) {
+                            throw new Error(`HTTP error! status: ${catRes.status}`);
+                        }
+                        const catData = await catRes.json();
+                        setProductLocations(catData.regional_performance || []);
+                        setProductBuyers(catData.buyers_locations || []);
+                        setCompetitionLocations([]);
+                        setSimilarProductBuyers([]);
+                    }
                 }
+                // If no category is selected but a product or brand exists, use the original product/brand branch.
+                else if (selectedProduct || selectedBrand) {
+                    const [
+                        productRes,
+                        competitionRes,
+                        productBuyersRes,
+                        similarProductBuyersRes,
+                    ] = await Promise.all([
+                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/regional-performance`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_name: selectedProduct || '',
+                                brand: selectedBrand || '',
+                                radius_km: radius,
+                            }),
+                        }),
+                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/comparable-product-performance`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_name: selectedProduct || '',
+                                brand: selectedBrand || '',
+                                radius_km: radius,
+                            }),
+                        }),
+                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/product-buyers-locations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_name: selectedProduct || '',
+                                brand: selectedBrand || '',
+                                radius_km: radius,
+                            }),
+                        }),
+                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/similar-product-buyers-locations`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                product_name: selectedProduct || '',
+                                brand: selectedBrand || '',
+                                radius_km: radius,
+                            }),
+                        }),
+                    ]);
 
-                const productData = await productRes.json();
-                const competitionData = await competitionRes.json();
-                const productBuyersData = await productBuyersRes.json();
-                const similarProductBuyersData = await similarProductBuyersRes.json();
+                    if (
+                        !productRes.ok ||
+                        !competitionRes.ok ||
+                        !productBuyersRes.ok ||
+                        !similarProductBuyersRes.ok
+                    ) {
+                        throw new Error(
+                            `HTTP error! status: ${productRes.status}, ${competitionRes.status}, ${productBuyersRes.status}, or ${similarProductBuyersRes.status}`
+                        );
+                    }
 
-                setProductLocations(productData.results || []);
-                setCompetitionLocations(competitionData.results || []);
-                setProductBuyers(productBuyersData.results || []);
-                setSimilarProductBuyers(similarProductBuyersData.results || []);
+                    const productData = await productRes.json();
+                    const competitionData = await competitionRes.json();
+                    const productBuyersData = await productBuyersRes.json();
+                    const similarProductBuyersData = await similarProductBuyersRes.json();
 
+                    setProductLocations(productData.results || []);
+                    setCompetitionLocations(competitionData.results || []);
+                    setProductBuyers(productBuyersData.results || []);
+                    setSimilarProductBuyers(similarProductBuyersData.results || []);
+                }
             } catch (err) {
                 setError(err);
                 console.error("Error fetching data:", err);
@@ -97,7 +262,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, selectedCategory, radius
         };
 
         fetchData();
-    }, [selectedProduct, selectedBrand, radius]);
+    }, [selectedProduct, selectedBrand, selectedCategory, radius]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Radius of the Earth in km
