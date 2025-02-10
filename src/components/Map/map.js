@@ -6,7 +6,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
+const MapComponent = ({ selectedBrand, selectedProduct, radius, selectedCategory }) => {
     const [viewState, setViewState] = useState({
         longitude: 5.932599209790851,  // Center longitude for Nigeria
         latitude: 9.340632608330793,   // Center latitude for Nigeria
@@ -22,13 +22,13 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!selectedProduct && !selectedBrand) return;
+        if (!selectedProduct && !selectedBrand && !selectedCategory) return;
 
         const fetchData = async () => {
             try {
                 setLoading(true);
                 const [productRes, competitionRes, productBuyersRes, similarProductBuyersRes] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/regional-performance`, {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/product-sellers-performance`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -36,10 +36,11 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                         body: JSON.stringify({
                             product_name: selectedProduct || '',
                             brand: selectedBrand || '',
+                            product_category: selectedCategory || '',
                             radius_km: radius
                         })
                     }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/comparable-product-performance`, {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/similar-product-sellers-performance`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -47,6 +48,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                         body: JSON.stringify({
                             product_name: selectedProduct || '',
                             brand: selectedBrand || '',
+                            product_category: selectedCategory || '',
                             radius_km: radius
                         })
                     }),
@@ -58,6 +60,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                         body: JSON.stringify({
                             product_name: selectedProduct || '',
                             brand: selectedBrand || '',
+                            product_category: selectedCategory || '',
                             radius_km: radius
                         })
                     }),
@@ -69,6 +72,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                         body: JSON.stringify({
                             product_name: selectedProduct || '',
                             brand: selectedBrand || '',
+                            product_category: selectedCategory || '',
                             radius_km: radius
                         })
                     })
@@ -97,7 +101,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
         };
 
         fetchData();
-    }, [selectedProduct, selectedBrand, radius]);
+    }, [selectedProduct, selectedBrand, selectedCategory, radius]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Radius of the Earth in km
@@ -203,7 +207,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                 ['get', 'point_count'],
                 '#E07A5F',
                 2,
-                '#E07A5F',
+                '#81B29A',
                 100,
                 '#f1f075',
                 // 750,
@@ -242,7 +246,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
         source: 'locations',
         filter: ['!', ['has', 'point_count']],
         paint: {
-            'circle-color': '#E07A5F',
+            'circle-color': '#81B29A',
             'circle-radius': 6,
             'circle-stroke-width': 1,
             'circle-opacity': 0.8,
@@ -302,7 +306,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                     type="fill"
                     paint={{
                         'fill-color': '#203A58',
-                        'fill-opacity': 0.4
+                        'fill-opacity': 0.5
                     }}
                     filter={['==', 'isProduct', true]}
                 />
@@ -310,7 +314,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                     id="similar-product-coverage-layer"
                     type="fill"
                     paint={{
-                        'fill-color': '#81B29A',
+                        'fill-color': '#9e0000',
                         'fill-opacity': 0.4
                     }}
                     filter={['==', 'isProduct', false]}
@@ -328,7 +332,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                     id="similar-product-outline-layer"
                     type="line"
                     paint={{
-                        'line-color': '#81B29A',
+                        'line-color': '#9e0000',
                         'line-width': 2
                     }}
                     filter={['==', 'isProduct', false]}
@@ -379,7 +383,7 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius }) => {
                 >
                     <FaLocationDot
                         size={6}
-                        color="#78574B"
+                        color="#81B29A"
                         style={{ cursor: 'pointer' }}
                     />
                 </Marker>
