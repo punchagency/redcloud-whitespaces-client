@@ -7,6 +7,7 @@ const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [selectedBrand, setSelectedBrand] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
     const [radius, setRadius] = useState(10); // Default radius value
 
     const handleProductSelect = (product) => {
@@ -18,6 +19,11 @@ const Dashboard = () => {
         setSelectedBrand(brand.value);
     };
 
+    const handleCategorySelect = (category) => {
+        setSelectedProduct(null);
+        setSelectedCategory(category.value);
+    };
+
     const handleRadiusChange = (newRadius) => {
         setRadius(newRadius);
     };
@@ -25,10 +31,21 @@ const Dashboard = () => {
     return (
         <div className="flex flex-col md:flex-row">
             <div className="w-full md:w-1/4 p-4">
-                <Filter onProductSelect={handleProductSelect} onBrandSelect={handleBrandSelect} onRadiusChange={handleRadiusChange} />
+                <Filter 
+                    onProductSelect={handleProductSelect} 
+                    onBrandSelect={handleBrandSelect} 
+                    onCategorySelect={handleCategorySelect}
+                    onRadiusChange={handleRadiusChange} 
+                />
             </div>
             <div className="w-full md:w-3/4 p-4">
-                <MapComponent onRegionSelect={setSelectedRegion} selectedProduct={selectedProduct} selectedBrand={selectedBrand} radius={radius} />
+                <MapComponent 
+                    onRegionSelect={setSelectedRegion} 
+                    selectedProduct={selectedProduct} 
+                    selectedBrand={selectedBrand} 
+                    selectedCategory={selectedCategory}
+                    radius={radius} 
+                />
                 {selectedRegion && <Insights region={selectedRegion} />}
             </div>
         </div>

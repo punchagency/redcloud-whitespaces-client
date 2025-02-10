@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import Select from 'react-select';
 import debounce from 'lodash.debounce';
 
-const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
+const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChange }) => {
     const [brands, setBrands] = useState([]);
     const [products, setProducts] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [radius, setRadius] = useState(10); // Default radius value
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(null);
 
     const fetchBrands = async (inputValue) => {
         if (!inputValue) return;
@@ -32,12 +34,34 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
         }
     };
 
-    const fetchProducts = async (inputValue, selectedBrand) => {
-        if (!inputValue && !selectedBrand) return;
+    const fetchCategories = async (inputValue) => {
+        if (!inputValue) return;
 
         setLoading(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-products?brand=${selectedBrand || ''}&product_name=${inputValue || ''}&limit=100&offset=0`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?category_name=${inputValue}&limit=100&offset=0`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            const data = await res.json();
+            setCategories(data.results.map(category => ({
+                value: category?.category_name,
+                label: category?.category_name
+            })));
+        } catch (err) {
+            setError(err);
+            console.error("Error fetching categories:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchProducts = async (inputValue, selectedBrand, selectedCategory) => {
+        if (!inputValue && !selectedBrand && !selectedCategory) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-products?brand=${selectedBrand || ''}&product_name=${inputValue || ''}&product_category=${selectedCategory || ''}&limit=100&offset=0`);
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
@@ -57,13 +81,18 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
     // Debounce the fetch functions to limit API calls
     const debouncedFetchBrands = debounce(fetchBrands, 300);
     const debouncedFetchProducts = debounce(fetchProducts, 300);
+    const debouncedFetchCategories = debounce(fetchCategories, 300);
 
     const handleBrandInputChange = (inputValue) => {
         debouncedFetchBrands(inputValue);
     };
 
     const handleProductInputChange = (inputValue) => {
-        debouncedFetchProducts(inputValue, selectedBrand);
+        debouncedFetchProducts(inputValue, selectedBrand, selectedCategory);
+    };
+
+    const handleCategoryInputChange = (inputValue) => {
+        debouncedFetchCategories(inputValue);
     };
 
     const handleBrandSelect = (brand) => {
@@ -75,6 +104,11 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
         const newRadius = parseInt(event.target.value, 10);
         setRadius(newRadius);
         onRadiusChange(newRadius);
+    };
+
+    const handleCategorySelect = (category) => {
+        setSelectedCategory(category.value);
+        onCategorySelect(category);
     };
 
     return (
@@ -98,6 +132,7 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
                 }}
             />
 
+
             <h3 className="text-md font-semibold mb-2">Product</h3>
             <Select
                 options={products}
@@ -115,6 +150,25 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
                 }}
             />
 
+
+            <h3 className="text-md font-semibold mb-2">Category</h3>
+            <Select
+                options={categories}
+                onInputChange={handleCategoryInputChange}
+                onChange={handleCategorySelect}
+                placeholder="Search & select a category"
+                isLoading={loading}
+                className="mb-4"
+                styles={{
+                    control: (base) => ({
+                        ...base,
+                        cursor: 'pointer',
+                        color: 'black'
+                    })
+                }}
+            />
+
+
             {error && <div className="text-red-500">Error: {error.message}</div>}
 
             {/* <div className="mt-4">
@@ -122,7 +176,6 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
                 <label className="block text-sm font-medium text-gray-700">Radius: {radius}</label>
                 <input
                     type="range"
-                    disabled={true}
                     min="1"
                     max="100"
                     value={radius}
@@ -131,6 +184,20 @@ const Filter = ({ onProductSelect, onBrandSelect, onRadiusChange }) => {
                     style={{ cursor: 'pointer' }}
                 />
             </div> */}
+
+            <hr className="my-4 border-t-2 border-black" />
+
+            <div className="mt-4">
+                <h3 className="text-md font-semibold mb-2">Legend</h3>
+                <div className="flex items-center mb-2">
+                    <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#203A58' }}></span>
+                    <span className="text-sm">Product Sales Area</span>
+                </div>
+                <div className="flex items-center">
+                    <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#9e0000' }}></span>
+                    <span className="text-sm">Similar Product Sales Area</span>
+                </div>
+            </div>
         </div>
     );
 };
