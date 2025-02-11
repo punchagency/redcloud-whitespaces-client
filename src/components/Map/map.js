@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import { FaLocationDot } from "react-icons/fa6";
+import { RiseLoader } from "react-spinners";
+
 
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -107,9 +109,9 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius, selectedCategory
         const R = 6371; // Radius of the Earth in km
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
+        const a =
             Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c; // Distance in km
@@ -278,9 +280,25 @@ const MapComponent = ({ selectedBrand, selectedProduct, radius, selectedCategory
             }
         }
     };
+    const override = {
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh", // Full viewport height to center vertically
+    };
 
     if (loading) {
-        return <div>Loading map data...</div>;
+        return (
+            <div style={override}>
+                <RiseLoader
+                    color={"#19dcb7"}
+                    loading={loading}
+                    size={30}
+                    aria-label="Loading Spinner"
+                    data-testid="loader"
+                />
+            </div>
+        );
     }
 
     if (error) {
