@@ -188,14 +188,18 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
             <hr className="my-4 border-t-2 border-black" />
 
             <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2">Legend</h3>
+                <h2 className="text-lg font-bold mb-4">Legend</h2>
                 <div className="flex items-center mb-2">
                     <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#203A58' }}></span>
                     <span className="text-sm">Product Sales Area</span>
                 </div>
                 <div className="flex items-center">
                     <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#9e0000' }}></span>
-                    <span className="text-sm">Similar Product Sales Area</span>
+                    <span className="text-sm">Similar Product/White Space Sales Area</span>
+                </div>
+                <div className="flex items-center">
+                    <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#81B29A' }}></span>
+                    <span className="text-sm">Sellers</span>
                 </div>
             </div>
         </div>
