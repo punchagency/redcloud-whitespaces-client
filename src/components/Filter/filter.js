@@ -34,12 +34,12 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
         }
     };
 
-    const fetchCategories = async (inputValue) => {
-        if (!inputValue) return;
+    const fetchCategories = async (inputValue, selectedBrand) => {
+        if (!inputValue && !selectedBrand) return;
 
         setLoading(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?category_name=${inputValue}&limit=100&offset=0`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?category_name=${inputValue || ''}&brand=${selectedBrand || ''}&limit=100&offset=0`);
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
@@ -92,7 +92,7 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
     };
 
     const handleCategoryInputChange = (inputValue) => {
-        debouncedFetchCategories(inputValue);
+        debouncedFetchCategories(inputValue, selectedBrand);
     };
 
     const handleBrandSelect = (brand) => {
