@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import MapComponent from '../Map/map';
+import { useState } from 'react';
 import Filter from '../Filter/filter';
 import Insights from '../Insights/insights';
+import MapComponent from '../Map/map';
 
 const Dashboard = () => {
     const [selectedRegion, setSelectedRegion] = useState(null);
@@ -10,18 +10,19 @@ const Dashboard = () => {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [radius, setRadius] = useState(10); // Default radius value
 
-    const handleProductSelect = (product) => {
-        setSelectedProduct(product.value);
+    const handleBrandSelect = (brand) => {
+        setSelectedBrand(brand?.value? brand?.value : null);
+        setSelectedProduct(null);
+        setSelectedCategory(null); 
     };
 
-    const handleBrandSelect = (brand) => {
-        setSelectedProduct(null);
-        setSelectedBrand(brand.value);
+    const handleProductSelect = (product) => {
+        setSelectedProduct(product?.value? product?.value : null);
+        setSelectedCategory(null);
     };
 
     const handleCategorySelect = (category) => {
-        setSelectedProduct(null);
-        setSelectedCategory(category.value);
+        setSelectedCategory(category?.value? category?.value : null);
     };
 
     const handleRadiusChange = (newRadius) => {
@@ -36,6 +37,9 @@ const Dashboard = () => {
                     onBrandSelect={handleBrandSelect} 
                     onCategorySelect={handleCategorySelect}
                     onRadiusChange={handleRadiusChange} 
+                    selectedBrand={selectedBrand}
+                    selectedProduct={selectedProduct}
+                    selectedCategory={selectedCategory}
                 />
             </div>
             <div className="w-full md:w-3/4 p-4">
