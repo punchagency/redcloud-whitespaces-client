@@ -1,18 +1,44 @@
-import React, { useState } from 'react';
-import Select from 'react-select';
 import debounce from 'lodash.debounce';
+import { useCallback, useState } from 'react';
+import Select from 'react-select';
 
-const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChange }) => {
+const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChange, selectedBrand, selectedProduct, selectedCategory }) => {
     const [brands, setBrands] = useState([]);
     const [products, setProducts] = useState([]);
-    const [selectedBrand, setSelectedBrand] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [radius, setRadius] = useState(10); // Default radius value
     const [categories, setCategories] = useState([]);
-    const [selectedCategory, setSelectedCategory] = useState(null);
 
-    const fetchBrands = async (inputValue) => {
+    const selectOptions = {
+        control: (base) => ({
+            ...base,
+            cursor: 'pointer',
+            color: 'black'
+        }),
+        placeholder: (base) => ({
+            ...base,
+            color: 'black'
+        }),
+        singleValue: (base) => ({
+            ...base,
+            color: 'black'
+        }),
+        menu: (base) => ({
+            ...base,
+            color: 'black',
+            backgroundColor: 'white'
+        }),
+        option: (base, state) => ({
+            ...base,
+            color: state.isSelected ? 'white' : 'black',
+            backgroundColor: state.isSelected ? '#007bff' : 'white',
+            '&:hover': {
+                backgroundColor: '#f1f1f1'
+            }
+        })
+    }
+
+    const fetchBrands = useCallback(async (inputValue) => {
         if (!inputValue) return;
 
         setLoading(true);
@@ -32,14 +58,14 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedBrand]);
 
-    const fetchCategories = async (inputValue) => {
+    const fetchCategories = useCallback(async (inputValue, selectedBrand) => {
         if (!inputValue) return;
 
         setLoading(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?category_name=${inputValue}&limit=100&offset=0`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/white-space/list-of-categories?brand=${selectedBrand}&category_name=${inputValue}&limit=100&offset=0`);
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
@@ -54,9 +80,9 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchProducts = async (inputValue, selectedBrand, selectedCategory) => {
+    const fetchProducts = useCallback(async (inputValue, selectedBrand, selectedCategory) => {
         if (!inputValue && !selectedBrand && !selectedCategory) return;
 
         setLoading(true);
@@ -76,134 +102,126 @@ const Filter = ({ onProductSelect, onBrandSelect, onCategorySelect, onRadiusChan
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // Debounce the fetch functions to limit API calls
-    const debouncedFetchBrands = debounce(fetchBrands, 300);
-    const debouncedFetchProducts = debounce(fetchProducts, 300);
-    const debouncedFetchCategories = debounce(fetchCategories, 300);
+    const debouncedFetchBrands = useCallback(debounce(fetchBrands, 300), [fetchBrands]);
+    const debouncedFetchProducts = useCallback(debounce(fetchProducts, 300), [fetchProducts]);
+    const debouncedFetchCategories = useCallback(debounce(fetchCategories, 300), [fetchCategories]);
 
-    const handleBrandInputChange = (inputValue) => {
+    const handleBrandInputChange = useCallback((inputValue) => {
         debouncedFetchBrands(inputValue);
-    };
+    }, [debouncedFetchBrands]);
 
-    const handleProductInputChange = (inputValue) => {
+    const handleProductInputChange = useCallback((inputValue) => {
         debouncedFetchProducts(inputValue, selectedBrand, selectedCategory);
-    };
+    }, [debouncedFetchProducts, selectedBrand, selectedCategory]);
 
-    const handleCategoryInputChange = (inputValue) => {
-        debouncedFetchCategories(inputValue);
-    };
+    const handleCategoryInputChange = useCallback((inputValue) => {
+        debouncedFetchCategories(inputValue, selectedBrand);
+    }, [debouncedFetchCategories, selectedBrand]);
 
-    const handleBrandSelect = (brand) => {
-        setSelectedBrand(brand.value);
+    const handleBrandSelect = useCallback((brand) => {
+        setProducts([]);
+        setCategories([]);
         onBrandSelect(brand);
-    };
+        onProductSelect(null);
+        onCategorySelect(null);
+    }, [onBrandSelect, onProductSelect, onCategorySelect]);
 
-    const handleRadiusChange = (event) => {
+    const handleProductSelect = useCallback((product) => {
+        onProductSelect(product);
+        setCategories([]);
+        onCategorySelect(null);
+    }, [onProductSelect, onCategorySelect]);
+
+    const handleRadiusChange = useCallback((event) => {
         const newRadius = parseInt(event.target.value, 10);
         setRadius(newRadius);
         onRadiusChange(newRadius);
-    };
+    }, [onRadiusChange]);
 
-    const handleCategorySelect = (category) => {
-        setSelectedCategory(category.value);
+    const handleCategorySelect = useCallback((category) => {
         onCategorySelect(category);
+    }, [onCategorySelect]);
+
+    const handleReset = () => {
+        onBrandSelect(null);
+        onCategorySelect(null);
+        onProductSelect(null);
     };
 
     return (
         <div className="bg-white p-4 rounded shadow">
-            <h2 className="text-lg font-bold mb-4">Filter Options</h2>
+            <h2 className="text-lg font-bold mb-4 text-black">Filter Options</h2>
             <hr className="my-4 border-t-2 border-black" />
-            <h3 className="text-md font-semibold mb-2">Brand</h3>
+            <h3 className="text-md font-semibold mb-2 text-black">Brand</h3>
             <Select
                 options={brands}
                 onInputChange={handleBrandInputChange}
                 onChange={handleBrandSelect}
+                value={brands.find(brand => brand.value === selectedBrand) || null}
                 placeholder="Search and select a brand"
                 isLoading={loading}
+                isClearable
                 className="mb-4"
-                styles={{
-                    control: (base) => ({
-                        ...base,
-                        cursor: 'pointer',
-                        color: 'black'
-                    })
-                }}
+                styles={selectOptions}
             />
 
-
-            <h3 className="text-md font-semibold mb-2">Product</h3>
+            <h3 className="text-md font-semibold mb-2 text-black">Product</h3>
             <Select
                 options={products}
                 onInputChange={handleProductInputChange}
-                onChange={onProductSelect}
+                onChange={handleProductSelect}
+                value={products.find(product => product.value === selectedProduct) || null}
                 placeholder="Search and select a product"
                 isLoading={loading}
+                isClearable
                 className="mb-4"
-                styles={{
-                    control: (base) => ({
-                        ...base,
-                        cursor: 'pointer',
-                        color: 'black'
-                    })
-                }}
+                styles={selectOptions}
             />
 
-
-            <h3 className="text-md font-semibold mb-2">Category</h3>
+            <h3 className="text-md font-semibold mb-2 text-black">Category</h3>
             <Select
                 options={categories}
                 onInputChange={handleCategoryInputChange}
                 onChange={handleCategorySelect}
+                value={categories.find(category => category.value === selectedCategory) || null}
                 placeholder="Search & select a category"
                 isLoading={loading}
+                isClearable
                 className="mb-4"
-                styles={{
-                    control: (base) => ({
-                        ...base,
-                        cursor: 'pointer',
-                        color: 'black'
-                    })
-                }}
+                styles={selectOptions}
             />
-
 
             {error && <div className="text-red-500">Error: {error.message}</div>}
 
-            {/* <div className="mt-4">
-                <h3 className="text-md font-semibold mb-2">Radius (km)</h3>
-                <label className="block text-sm font-medium text-gray-700">Radius: {radius}</label>
-                <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    value={radius}
-                    onChange={handleRadiusChange}
-                    className="w-full"
-                    style={{ cursor: 'pointer' }}
-                />
-            </div> */}
+            <button
+                onClick={handleReset}
+                className="mt-4 bg-red-500 text-white py-2 px-4 rounded"
+            >
+                Reset
+            </button>
 
             <hr className="my-4 border-t-2 border-black" />
 
             <div className="mt-4">
-                <h2 className="text-lg font-bold mb-4">Legend</h2>
+                <h2 className="text-lg font-bold mb-4 text-black">Legend</h2>
                 <div className="flex items-center mb-2">
                     <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#203A58' }}></span>
-                    <span className="text-sm">Product Sales Area</span>
+                    <span className="text-sm text-black">Product Sales Area</span>
                 </div>
                 <div className="flex items-center">
                     <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#9e0000' }}></span>
-                    <span className="text-sm">Similar Product/White Space Sales Area</span>
+                    <span className="text-sm text-black">Similar Product/White Space Sales Area</span>
                 </div>
                 <div className="flex items-center">
                     <span className="inline-block w-4 h-4 mr-2" style={{ backgroundColor: '#81B29A' }}></span>
-                    <span className="text-sm">Sellers</span>
+                    <span className="text-sm text-black">Sellers</span>
                 </div>
             </div>
         </div>
     );
 };
 
-export default Filter; 
+export default Filter;
